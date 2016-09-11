@@ -20,6 +20,7 @@ class MapPage extends BaseLayout {
         $arrowSize = "8%";
         ?>
 
+        <!--suppress JSUnresolvedVariable -->
         <tr>
             <td colspan="4" class="td_body">
                 <table style="width: 100%; table-layout:fixed">
@@ -100,6 +101,37 @@ class MapPage extends BaseLayout {
         ?>
         <script src="/scripts/map.js" type="text/javascript"></script>
         <script type="text/javascript">
+            function ParcelViewForMapPage(id) {
+                ParcelView.call(this, id);
+            }
+            ParcelViewForMapPage.prototype = Object.create(ParcelView.prototype);
+
+            ParcelViewForMapPage.prototype.getHTML = function () {
+                var res = `<img style="position: absolute; visibility: hidden" src="${MAP_FIELD_IMAGE_FOLDER}selection.png" id="${this.id}_sel">`;
+                res += ParcelView.prototype.getHTML.call(this);
+                return res;
+            }
+
+            ParcelViewForMapPage.prototype.init = function () {
+                ParcelView.prototype.init.call(this);
+                this.selectionObject = document.getElementById(`${this.id}_sel`);
+            }
+
+            ParcelViewForMapPage.prototype.updateSubElements = function () {
+                ParcelView.prototype.updateSubElements.call(this);
+
+                this.selectionObject.style.width = this.imageObject.clientWidth;
+                this.selectionObject.style.height = this.imageObject.clientHeight;
+                if (typeof this.data != 'undefined' && this.data.x == selectedParcel.x && this.data.y == selectedParcel.y) {
+                    this.selectionObject.style.visibility = "visible";
+                    updateDescription(this);
+                } else {
+                    this.selectionObject.style.visibility = "hidden";
+                }
+            }
+
+            //=========================
+
             const MAP_SIZE = 5;
             const CELL_PADDING = 1;
 
@@ -116,6 +148,8 @@ class MapPage extends BaseLayout {
             var mapGlobalCenterY = playerDemesne[0].y;
 
             var selectedParcel = {x: mapGlobalCenterX, y: mapGlobalCenterY};
+
+            var parcelObjects = [];
 
             /*=============== gui functions ===============*/
             function showCurrentDemesne() {
@@ -160,13 +194,15 @@ class MapPage extends BaseLayout {
             }
 
             function onParcelClick(lX, lY) {
-                var parcelObj = getFieldObject("po", lX, lY);
-                var data = parcelObj.data;
-                var gX = data.x;
-                var gY = data.y;
+                var parcelObj = getParcelObject(lX, lY);
+                var gX = parcelObj.data.x;
+                var gY = parcelObj.data.y;
+                var prevLocalX = globalToLocalX(selectedParcel.x);
+                var prevLocalY = globalToLocalY(selectedParcel.y);
+                var prevParcelObj = getParcelObject(prevLocalX, prevLocalY);
                 selectedParcel = {x: gX, y: gY};
-                updateImageSelection();
-                updateDescription(parcelObj);
+                prevParcelObj.updateSubElements(); // hiding selection
+                parcelObj.updateSubElements(); // updating selection and description
             }
 
             /*=============== util functions ===============*/
@@ -188,8 +224,8 @@ class MapPage extends BaseLayout {
                 return inBounds(x, delta, WHOLE_MAP_WIDTH - delta) && inBounds(y, delta, WHOLE_MAP_HEIGHT - delta);
             }
 
-            function getFieldObject(prefix, localX, localY) {
-                return document.getElementById(`${prefix}${localX}_${localY}`);
+            function getParcelObject(localX, localY) {
+                return parcelObjects[localX][localY];
             }
 
             /*=============== map functions ===============*/
@@ -208,34 +244,6 @@ class MapPage extends BaseLayout {
                 redrawMap();
             }
 
-            function updateImageSelection(parcel = null) {
-                function updateParcelSelectionImage(parcelObj) {
-                    if (parcelObj == null) {
-                        return;
-                    }
-                    var gX = parcelObj.data.x;
-                    var gY = parcelObj.data.y;
-                    var lX = globalToLocalX(gX);
-                    var lY = globalToLocalY(gY);
-                    var selectionObj = getFieldObject("sel", lX, lY);
-                    if (selectedParcel != null && gX == selectedParcel.x && gY == selectedParcel.y) {
-                        selectionObj.style.visibility = "visible";
-                    } else {
-                        selectionObj.style.visibility = "hidden";
-                    }
-                }
-
-                if (parcel != null) {
-                    updateParcelSelectionImage(parcel)
-                } else {
-                    for (var x = 0; x < MAP_SIZE; x++) {
-                        for (var y = 0; y < MAP_SIZE; y++) {
-                            updateParcelSelectionImage(getFieldObject("po", x, y));
-                        }
-                    }
-                }
-            }
-
             function redrawMap() {
                 var delta = (MAP_SIZE - 1) / 2;
                 for (var gX = mapGlobalCenterX - delta; gX <= mapGlobalCenterX + delta; gX++) {
@@ -243,19 +251,9 @@ class MapPage extends BaseLayout {
                         var lX = gX - mapGlobalCenterX + delta;
                         var lY = gY - mapGlobalCenterY + delta;
 
-                        var parcelObj = getFieldObject("po", lX, lY);
+                        var parcelObj = getParcelObject(lX, lY);
                         if (inMapBounds(gX, gY)) {
-                            parcelObj.downloadData(gX, gY, (function (lX, lY, gX, gY) {
-                                if (gX == selectedParcel.x && gY == selectedParcel.y) {
-                                    return function () {
-                                        var parcelObj = getFieldObject("po", lX, lY);
-                                        updateDescription(parcelObj);
-                                        updateImageSelection(parcelObj);
-                                    }
-                                } else {
-                                    return updateImageSelection;
-                                }
-                            })(lX, lY, gX, gY));
+                            parcelObj.downloadData(gX, gY);
                         } else {
                             parcelObj.lastDssid = -1; // to invalidate any download sessions on this image
                             parcelObj.src = MAP_FIELD_IMAGE_FOLDER + "terra_incognita.png";
@@ -278,18 +276,15 @@ class MapPage extends BaseLayout {
                 var mapContainer = document.getElementById("map_container");
                 mapContainer.removeAttribute("width");
                 mapContainer.style.tableLayout = "auto";
-                var imSize = document.getElementById("po0_0").getWidth();
+                var imSize = getParcelObject(0, 0).getWidth();
                 var tdSize = imSize + 2 * CELL_PADDING;
                 for (var x = 0; x < MAP_SIZE; x++) {
                     for (var y = 0; y < MAP_SIZE; y++) {
-                        var td = getFieldObject("td", x, y);
+                        var td = document.getElementById(`td${x}_${y}`);
                         td.style.width = tdSize;
                         td.style.height = tdSize;
-                        var parcelObj = getFieldObject("po", x, y);
+                        var parcelObj = getParcelObject(x, y);
                         parcelObj.setSize(imSize, imSize);
-                        var selectionImage = getFieldObject("sel", x, y);
-                        selectionImage.style.width = imSize;
-                        selectionImage.style.height = imSize;
                     }
                 }
             }
@@ -306,12 +301,15 @@ class MapPage extends BaseLayout {
                 mapContainer.style.borderCollapse = "collapse";
                 //mapContainer.style.height = "100%";
 
-                var resultHTML = "";
+                for (var x = 0; x < MAP_SIZE; x++) {
+                    parcelObjects[x] = [];
+                }
 
+                var resultHTML = "";
                 var cellSize = Math.round(100 / MAP_SIZE);
-                for (var y = 0; y < MAP_SIZE; y++) {
+                for (y = 0; y < MAP_SIZE; y++) {
                     resultHTML += "<tr>";
-                    for (var x = 0; x < MAP_SIZE; x++) {
+                    for (x = 0; x < MAP_SIZE; x++) {
                         resultHTML += `<td style="position: relative; width: ${cellSize}%; padding: ${CELL_PADDING}px" id="td${x}_${y}" onclick="onParcelClick(${x}, ${y})">`;
                         if (y == 0) {
                             resultHTML += `<span style="position: absolute; font-size: .8em; transform: translate(-50%, -100%); left: 50%" id="verticalAxis${x}">${x}</span>`;
@@ -319,8 +317,8 @@ class MapPage extends BaseLayout {
                         if (x == 0) {
                             resultHTML += `<span style="position: absolute; font-size: .8em; transform: translate(-100%, -50%); top: 50%" id="horizontalAxis${y}">${y}</span>`;
                         }
-                        resultHTML += `<img style="position: absolute; visibility: hidden" src="${MAP_FIELD_IMAGE_FOLDER}selection.png" id="sel${x}_${y}">`;
-                        resultHTML += createParcelHtml(`po${x}_${y}`);
+                        var po = parcelObjects[x][y] = new ParcelViewForMapPage(`po${x}_${y}`);
+                        resultHTML += po.getHTML();
                         resultHTML += "</td>";
                     }
                     resultHTML += "</tr>";
@@ -329,7 +327,7 @@ class MapPage extends BaseLayout {
 
                 for (x = 0; x < MAP_SIZE; x++) {
                     for (y = 0; y < MAP_SIZE; y++) {
-                        initParcelFunctions(`po${x}_${y}`);
+                        parcelObjects[x][y].init();
                     }
                 }
             }

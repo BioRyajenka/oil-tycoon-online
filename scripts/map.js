@@ -35,63 +35,69 @@ function performXmlHttpRequest(url, consumer) {
     xmlHttp.send(null);
 }
 
-function createParcelHtml(id) {
+function ParcelView(id) {
     this.id = id;
-    var res = `<img style="position: absolute" src="/res/map/habitability.png" id="${id}_habitability">`;
-    res += `<img style="width: 100%" src="${MAP_FIELD_IMAGE_FOLDER}loading.gif" id="${id}" border=0>`;
+}
+
+ParcelView.prototype.getHTML = function () {
+    var res = `<img style="position: absolute" src="/res/map/habitability.png" id="${this.id}_habitability">`;
+    res += `<img style="width: 100%" src="${MAP_FIELD_IMAGE_FOLDER}loading.gif" id="${this.id}_image" border=0>`;
     return res;
+};
+
+/**
+ * Intended to be called after html parsed
+ */
+ParcelView.prototype.init = function(){
+    this.imageObject = document.getElementById(`${this.id}_image`);
+    this.habitabilityObject = document.getElementById(`${this.id}_habitability`);
 }
 
-function initParcelFunctions(id) {
-    var imageObj = document.getElementById(id);
+ParcelView.prototype.updateSubElements = function () {
+    this.habitabilityObject.style.width = this.imageObject.clientWidth;
+    this.habitabilityObject.style.height = this.imageObject.clientHeight;
+    if (typeof this.data != 'undefined' && this.data.owner_id != null) {
+        this.habitabilityObject.style.visibility = 'visible';
+    } else {
+        this.habitabilityObject.style.visibility = 'hidden';
+    }
+};
 
-    imageObj.habitabilityObject = document.getElementById(`${id}_habitability`);
+ParcelView.prototype.setSize = function (width, height) {
+    this.imageObject.style.width = width;
+    this.imageObject.style.height = height;
+    this.updateSubElements();
+};
 
-    imageObj.updateSubElements = function() {
-        this.habitabilityObject.style.width = this.clientWidth;
-        this.habitabilityObject.style.height = this.clientHeight;
-        if (typeof this.data != 'undefined' && this.data.owner_id != null) {
-            this.habitabilityObject.style.visibility = 'visible';
-        } else {
-            this.habitabilityObject.style.visibility = 'hidden';
-        }
-    };
+ParcelView.prototype.getWidth = function () {
+    return this.imageObject.clientWidth;
+};
 
-    imageObj.setSize = function(width, height) {
-        this.style.width = width;
-        this.style.height = height;
-        this.updateSubElements();
-    };
+ParcelView.prototype.downloadData = function (globalX, globalY, onFinish = null) {
+    // dssid <=. download session id
+    if (typeof ParcelView.freeDssid == 'undefined') {
+        ParcelView.freeDssid = 0;
+    }
+    var dssid = ++ParcelView.freeDssid;
 
-    imageObj.getWidth = function() {
-        return this.clientWidth;
-    };
+    this.lastDssid = dssid;
 
-    imageObj.downloadData = function(globalX, globalY, onFinish = null) {
-        // dssid <=. download session id
-        if (typeof initParcelFunctions.freeDssid == 'undefined') {
-            initParcelFunctions.freeDssid = 0;
-        }
-        var dssid = ++initParcelFunctions.freeDssid;
+    var that = this;
+    // TODO: maybe cache it?
+    performXmlHttpRequest(`/scripts/get_parcel_info.php?x=${globalX}&y=${globalY}`, function (data) {
+        if (that.lastDssid != dssid) return;
+        that.data = data;
+        //noinspection JSUnresolvedVariable
+        that.imageObject.src = MAP_FIELD_IMAGE_FOLDER + data.image_name;
+        that.updateSubElements();
+        if (onFinish != null) onFinish(that);
+    });
 
-        imageObj.lastDssid = dssid;
-
-        // TODO: maybe cache it?
-        performXmlHttpRequest(`/scripts/get_parcel_info.php?x=${globalX}&y=${globalY}`, function (data) {
-            if (imageObj.lastDssid != dssid) return;
-            imageObj.data = data;
-            //noinspection JSUnresolvedVariable
-            imageObj.src = MAP_FIELD_IMAGE_FOLDER + data.image_name;
-            imageObj.updateSubElements();
-            if (onFinish != null) onFinish(imageObj);
-        });
-
-        /*
-         function sleep(time) {
-         return new Promise((resolve) => setTimeout(resolve, time));
-         }
-         var _delay = 0;
-         sleep(_delay).then(() => {});
-         */
-    };
-}
+    /*
+     function sleep(time) {
+     return new Promise((resolve) => setTimeout(resolve, time));
+     }
+     var _delay = 0;
+     sleep(_delay).then(() => {});
+     */
+};

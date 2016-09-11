@@ -38,8 +38,10 @@ class ParcelPage extends BaseLayout {
                         <td style="position:relative; text-align: center; width:40%; height: 1%; border: 1px solid black;" id="image_holder">
                         </td>
                         <script type="application/javascript">
-                            document.getElementById("image_holder").innerHTML = createParcelHtml("parcel_image");
-                            initParcelFunctions("parcel_image");
+                            parcelObject = new ParcelView("parcel_image");
+                            document.getElementById("image_holder").innerHTML = parcelObject.getHTML();
+                            parcelObject.init();
+                            parcelObject.downloadData(<?php echo $x?>, <?php echo $y?>);
                         </script>
                     </tr>
                     <tr>
@@ -62,11 +64,6 @@ class ParcelPage extends BaseLayout {
                 </div>
             </td>
         </tr>
-
-        <script type="application/javascript">
-            document.getElementById("parcel_image").downloadData(<?php echo $x?>, <?php echo $y?>);
-            //downloadParcelInfoAndUpdateItsImage(document.getElementById("image_id"), );
-        </script>
         <?php
     }
 
