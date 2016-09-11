@@ -62,14 +62,17 @@ function register($login, $password, $nickname, $email, $gender) {
 function registerWithoutChecks($login, $password, $nickname, $email, $gender) {
     mySQLQuery("INSERT INTO user_credentials (login, password, nickname, email, gender)
         VALUES ('$login', '$password', '$nickname', '$email', '$gender')", null);
+    $userId = getUserIdByLogin($login);
+    $color = generatePlayerColor();
+
+    mySQLQuery("INSERT INTO user_gamedata 
+(user_id, money, maxlevel_silo, maxlevel_transport_depot, maxlevel_scouting_depot, maxlevel_rig, transport_speed, researched_unique_technologies, color) VALUES 
+('$userId', 100, 1, 1, 1, 1, 1, '', '$color')", null);
 
     // TODO: it's temp, remove it
     for ($i = 0; $i < 3; $i++) {
         $x = rand(0, getMapSize()['width']);
         $y = rand(0, getMapSize()['height']);
-        $userId = getUserIdByLogin($login);
-        require_once "logger.php";
-        debug_log("acquired $x $y");
         acquireParcel($userId, $x, $y);
     }
 }

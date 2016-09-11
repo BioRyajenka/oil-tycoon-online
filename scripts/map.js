@@ -49,6 +49,7 @@ ParcelView.prototype.getHTML = function () {
  * Intended to be called after html parsed
  */
 ParcelView.prototype.init = function(){
+    this.data = null;
     this.imageObject = document.getElementById(`${this.id}_image`);
     this.habitabilityObject = document.getElementById(`${this.id}_habitability`);
 }
@@ -56,7 +57,7 @@ ParcelView.prototype.init = function(){
 ParcelView.prototype.updateSubElements = function () {
     this.habitabilityObject.style.width = this.imageObject.clientWidth;
     this.habitabilityObject.style.height = this.imageObject.clientHeight;
-    if (typeof this.data != 'undefined' && this.data.owner_id != null) {
+    if (this.data != null && this.data.owner_id != null) {
         this.habitabilityObject.style.visibility = 'visible';
     } else {
         this.habitabilityObject.style.visibility = 'hidden';

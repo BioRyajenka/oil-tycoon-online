@@ -34,9 +34,7 @@ function pixelsArrayToImageHtmlTag($arr, $imageWidth = null) {
     }
 
     // drawing an image
-    ob_start(function ($c) {
-        return base64_encode($c);
-    });
+    ob_start();
     imagejpeg($im);
     $data = base64_encode(ob_get_clean());
     imagedestroy($im);
@@ -47,4 +45,71 @@ function pixelsArrayToImageHtmlTag($arr, $imageWidth = null) {
     }
     $res .= ">";
     return $res;
+}
+
+function generatePlayerColor() {
+    $c1 = [
+        "r" => 170,
+        "g" => 150,
+        "b" => 100
+    ];
+
+    function hue($c) {
+        $max = $min = $r = $c['r'] / 255;
+        $g = $c['g'] / 255;
+        $b = $c['b'] / 255;
+        if ($g > $max) $max = $g;
+        if ($b > $max) $max = $b;
+        if ($g < $min) $min = $g;
+        if ($b < $min) $min = $b;
+        $delta = $max - $min;
+        if ($delta == 0) {
+            return 0;
+        }
+
+        $res = 0;
+        if ($r == $max) $res = ($g - $b) / $delta;
+        if ($g == $max) $res = 2 + ($b - $r) / $delta;
+        if ($b == $max) $res = 4 + ($r - $g) / $delta;
+
+        $res *= 60;
+        if ($res < 0) $res += 360;
+        return $res;
+    }
+
+    function f($x) {
+        $x /= 100;
+        return max($x, $x * $x);
+    }
+
+    function prob($x, $y, $z) {
+        return f($x) * f($y) * f($z) * min(f($y * 2) * f($y * 2), 1);
+    }
+
+    function calcColorProb($c2) {
+        global $c1;
+        $r = abs($c1['r'] - $c2['r']);
+        $g = abs($c1['g'] - $c2['g']);
+        $b = abs($c1['b'] - $c2['b']);
+
+        $x = intval(abs(hue($c1) - hue($c2)));
+        $y = max($r, $g, $b);
+        $z = min($r, $g, $b);
+        return prob($x, $y, $z);
+    }
+
+    function generateRandomColor() {
+        return [
+            "r" => rand(0, 255),
+            "g" => rand(0, 255),
+            "b" => rand(0, 255)
+        ];
+    }
+
+    function colorToString($c) {
+        return "#" . dechex($c['r']) . dechex($c['g']) . dechex($c['b']);
+    }
+
+    while (calcColorProb($color = generateRandomColor()) < .2);
+    return colorToString($color);
 }

@@ -108,6 +108,7 @@ class MapPage extends BaseLayout {
 
             ParcelViewForMapPage.prototype.getHTML = function () {
                 var res = `<img style="position: absolute; visibility: hidden" src="${MAP_FIELD_IMAGE_FOLDER}selection.png" id="${this.id}_sel">`;
+                res += `<img style="position: absolute; visibility: hidden" src="${MAP_FIELD_IMAGE_FOLDER}selection.png" id="${this.id}_sel">`;
                 res += ParcelView.prototype.getHTML.call(this);
                 return res;
             }
@@ -122,7 +123,7 @@ class MapPage extends BaseLayout {
 
                 this.selectionObject.style.width = this.imageObject.clientWidth;
                 this.selectionObject.style.height = this.imageObject.clientHeight;
-                if (typeof this.data != 'undefined' && this.data.x == selectedParcel.x && this.data.y == selectedParcel.y) {
+                if (this.data != null && this.data.x == selectedParcel.x && this.data.y == selectedParcel.y) {
                     this.selectionObject.style.visibility = "visible";
                     updateDescription(this);
                 } else {
@@ -153,9 +154,9 @@ class MapPage extends BaseLayout {
 
             /*=============== gui functions ===============*/
             function showCurrentDemesne() {
-                mapGlobalCenterX = playerDemesne[currentDemesneIndex].x;
-                mapGlobalCenterY = playerDemesne[currentDemesneIndex].y;
-                selectedParcel = {x: mapGlobalCenterX, y: mapGlobalCenterY};
+                demesne = playerDemesne[currentDemesneIndex];
+                setMapCenter(demesne.x, demesne.y);
+                selectedParcel = {x: demesne.x, y: demesne.y};
                 redrawMap();
 
                 //var mid = (MAP_SIZE - 1) / 2;
@@ -234,13 +235,16 @@ class MapPage extends BaseLayout {
                 var nx = mapGlobalCenterX + dx;
                 var ny = mapGlobalCenterY + dy;
 
+                setMapCenter(nx, ny);
+            }
+
+            function setMapCenter(gX, gY) {
                 var delta = (MAP_SIZE - 1) / 2 - 1;
+                gX = Math.max(delta, Math.min(gX, WHOLE_MAP_WIDTH - delta - 1));
+                gY = Math.max(delta, Math.min(gY, WHOLE_MAP_HEIGHT - delta - 1));
 
-                nx = Math.max(delta, Math.min(nx, WHOLE_MAP_WIDTH - delta - 1));
-                ny = Math.max(delta, Math.min(ny, WHOLE_MAP_HEIGHT - delta - 1));
-
-                mapGlobalCenterX = nx;
-                mapGlobalCenterY = ny;
+                mapGlobalCenterX = gX;
+                mapGlobalCenterY = gY;
                 redrawMap();
             }
 
@@ -256,7 +260,9 @@ class MapPage extends BaseLayout {
                             parcelObj.downloadData(gX, gY);
                         } else {
                             parcelObj.lastDssid = -1; // to invalidate any download sessions on this image
-                            parcelObj.src = MAP_FIELD_IMAGE_FOLDER + "terra_incognita.png";
+                            parcelObj.data = null;
+                            parcelObj.imageObject.src = MAP_FIELD_IMAGE_FOLDER + "terra_incognita.png";
+                            parcelObj.updateSubElements();
                         }
                     }
                 }

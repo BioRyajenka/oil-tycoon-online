@@ -107,6 +107,10 @@ function publishField($fieldImageTypes, $oilAmountDistribution, $oilSellCostDist
     mySQLQuery("SET FOREIGN_KEY_CHECKS=0", null);
     mySQLQuery("TRUNCATE facilities", null);
     mySQLQuery("TRUNCATE field", null);
+    mySQLQuery("TRUNCATE user_credentials", null);
+    mySQLQuery("TRUNCATE user_gamedata", null);
+    mySQLQuery("TRUNCATE user_knowledge_facilities", null);
+    mySQLQuery("TRUNCATE user_knowledge_oil", null);
 
     echo "tables truncated successfully<br>";
 
