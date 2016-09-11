@@ -1,0 +1,117 @@
+.main_table, tbody, tfoot, tr, th, td {
+    font-family: Verdana, arial, helvetica, sans-serif;
+    background: #262b38;
+    color: #fff;
+    text-align: left;
+    font-size: 12px;
+}
+
+@media screen {
+    .main_table {
+        //with aspect ratio 1.43
+        width: 400px;
+        height: 570px;
+    }
+}
+
+@media handheld {
+    .main_table {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.main_table {
+    border: 3px solid #567;
+    border-right-color: #000;
+    border-bottom-color: #000;
+}
+
+tfoot td, tfoot th, thead th, thead td, tbody td, tbody th {
+    //padding: 5px;
+    vertical-align: middle;
+    width: 25%;
+}
+
+thead th {
+    border: 1px solid;
+    border-color: #000 #567 #567 #000;
+    font-weight: bold;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+tfoot, thead {
+    height: 1%;
+}
+
+.td_body {
+    text-align: left;
+    vertical-align: top;
+}
+
+.wide_picture {
+    max-width: 100%;
+}
+
+.clickable {
+    background: #262b38;
+    color: #ffffff;
+}
+
+.clickable:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+.button {
+    @extend .clickable;
+    border: 3px solid #000000;
+    padding: 4px 6px;
+    font-size: 14px;
+    font-family: helvetica, serif;
+    text-decoration: none;
+    vertical-align: middle;
+}
+
+.button:hover {
+    border: 3px solid #000000;
+}
+
+.button:active {
+    border: 3px solid #000000;
+    background: #262b38;
+    color: #fff;
+}
+
+.squared_holder {
+  position: relative;
+}
+
+.squared_holder:before {
+  content: "";
+  display: block;
+  padding-top: 100%; /* initial ratio of 1:1*/
+}
+
+.squared {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+a {
+    text-decoration: none;
+}
+
+//noinspection CssUnknownProperty
+table {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
