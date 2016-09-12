@@ -1,4 +1,4 @@
-const MAP_FIELD_IMAGE_FOLDER = "/res/map/field/";
+const MAP_IMAGE_FOLDER = "/res/map/";
 
 /**
  * Creates XMLHttpRequest object in capability with all browsers
@@ -40,8 +40,9 @@ function ParcelView(id) {
 }
 
 ParcelView.prototype.getHTML = function () {
-    var res = `<img style="position: absolute" src="/res/map/habitability.png" id="${this.id}_habitability">`;
-    res += `<img style="width: 100%" src="${MAP_FIELD_IMAGE_FOLDER}loading.gif" id="${this.id}_image" border=0>`;
+    var res = `<img style="position: absolute" src="${MAP_IMAGE_FOLDER}habitability.png" id="${this.id}_habitability">`;
+    //res += `<img style="position: absolute" src="/res/map/frame.png" id="${this.id}_frame">`;
+    res += `<img style="width: 100%; src="/res/loading.gif" id="${this.id}_image" border=0>`;
     return res;
 };
 
@@ -54,7 +55,11 @@ ParcelView.prototype.init = function(){
     this.habitabilityObject = document.getElementById(`${this.id}_habitability`);
 }
 
-ParcelView.prototype.updateSubElements = function () {
+ParcelView.prototype.update = function () {
+    //noinspection JSUnresolvedVariable
+	if (this.data != null) {
+		this.imageObject.src = MAP_IMAGE_FOLDER + "field/" + this.data.image_name;
+	}
     this.habitabilityObject.style.width = this.imageObject.clientWidth;
     this.habitabilityObject.style.height = this.imageObject.clientHeight;
     if (this.data != null && this.data.owner_id != null) {
@@ -67,7 +72,7 @@ ParcelView.prototype.updateSubElements = function () {
 ParcelView.prototype.setSize = function (width, height) {
     this.imageObject.style.width = width;
     this.imageObject.style.height = height;
-    this.updateSubElements();
+    this.update();
 };
 
 ParcelView.prototype.getWidth = function () {
@@ -88,9 +93,7 @@ ParcelView.prototype.downloadData = function (globalX, globalY, onFinish = null)
     performXmlHttpRequest(`/scripts/get_parcel_info.php?x=${globalX}&y=${globalY}`, function (data) {
         if (that.lastDssid != dssid) return;
         that.data = data;
-        //noinspection JSUnresolvedVariable
-        that.imageObject.src = MAP_FIELD_IMAGE_FOLDER + data.image_name;
-        that.updateSubElements();
+        that.update();
         if (onFinish != null) onFinish(that);
     });
 

@@ -47,6 +47,18 @@ tfoot, thead {
   background: #ffffff;
   color: #000000; }
 
+.clickable2 {
+  background: none; }
+
+.clickable2:hover {
+  background: rgba(0, 0, 0, 0.7); }
+
+.facility_td {
+  border: 3px solid black; }
+
+.facility_td:hover {
+  border: 3px solid white; }
+
 .button {
   border: 3px solid #000000;
   padding: 4px 6px;

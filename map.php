@@ -10,13 +10,14 @@ require "scripts/base_layout.php";
 require "scripts/mysql_queries.php";
 require "scripts/session_guard.php";
 
+
 class MapPage extends BaseLayout {
     protected function printHead() {
         self::printDefaultHead("Some head");
     }
 
     protected function printBody() {
-        $this->initJS();
+        $this->js();
         $arrowSize = "8%";
         ?>
 
@@ -90,14 +91,14 @@ class MapPage extends BaseLayout {
                 </table>
             </td>
         </tr>
-
-        <script type="application/javascript">
-            //onParcelClick(mapGlobalCenterX, mapGlobalCenterY);
-        </script>
         <?php
     }
 
-    private function initJS() {
+    private function js() {
+        if (isset($_GET['x']) && isset($_GET['y'])) {
+            $requestedX = $_GET['x'];
+            $requestedY = $_GET['y'];
+        }
         ?>
         <script src="/scripts/map.js" type="text/javascript"></script>
         <script type="text/javascript">
@@ -106,9 +107,12 @@ class MapPage extends BaseLayout {
             }
             ParcelViewForMapPage.prototype = Object.create(ParcelView.prototype);
 
+            ParcelViewForMapPage.prototype.frameBorderWidth = "3px";
+
             ParcelViewForMapPage.prototype.getHTML = function () {
-                var res = `<img style="position: absolute; visibility: hidden" src="${MAP_FIELD_IMAGE_FOLDER}selection.png" id="${this.id}_sel">`;
-                res += `<img style="position: absolute; visibility: hidden" src="${MAP_FIELD_IMAGE_FOLDER}selection.png" id="${this.id}_sel">`;
+                var res = `<div style="width: 100%; height: 100%; position: absolute; visibility: hidden" id="${this.id}_frame"></div>`;
+                res += `<img style="position: absolute; visibility: hidden" src="${MAP_IMAGE_FOLDER}field/selection.png" id="${this.id}_sel">`;
+
                 res += ParcelView.prototype.getHTML.call(this);
                 return res;
             }
@@ -116,10 +120,14 @@ class MapPage extends BaseLayout {
             ParcelViewForMapPage.prototype.init = function () {
                 ParcelView.prototype.init.call(this);
                 this.selectionObject = document.getElementById(`${this.id}_sel`);
+                this.frameObject = document.getElementById(`${this.id}_frame`);
+                this.frameObject.setColor = function (color) {
+                    this.style.boxShadow = `inset 0px 0px 0px ${ParcelViewForMapPage.prototype.frameBorderWidth} ${color}`;
+                }
             }
 
-            ParcelViewForMapPage.prototype.updateSubElements = function () {
-                ParcelView.prototype.updateSubElements.call(this);
+            ParcelViewForMapPage.prototype.update = function () {
+                ParcelView.prototype.update.call(this);
 
                 this.selectionObject.style.width = this.imageObject.clientWidth;
                 this.selectionObject.style.height = this.imageObject.clientHeight;
@@ -129,9 +137,20 @@ class MapPage extends BaseLayout {
                 } else {
                     this.selectionObject.style.visibility = "hidden";
                 }
+
+                this.frameObject.style.width = this.imageObject.clientWidth;
+                this.frameObject.style.height = this.imageObject.clientHeight;
+                if (this.data != null && this.data.owner_id != null) {
+                    this.frameObject.style.visibility = "visible";
+                    this.frameObject.setColor(this.data.owner_color);
+                } else {
+                    this.frameObject.style.visibility = "hidden";
+                }
             }
 
             //=========================
+            //noinspection JSAnnotator
+            const USER_ID = <?php echo $_SESSION['user_id']?>;
 
             const MAP_SIZE = 5;
             const CELL_PADDING = 1;
@@ -145,8 +164,8 @@ class MapPage extends BaseLayout {
             const playerDemesne = <?php echo json_encode(getCurrentPlayerDemesne())?>;
             var currentDemesneIndex = 0;
 
-            var mapGlobalCenterX = playerDemesne[0].x;
-            var mapGlobalCenterY = playerDemesne[0].y;
+            var mapGlobalCenterX = <?php echo(isset($requestedX) && isset($requestedY) ? $requestedX : "playerDemesne[0].x")?>;
+            var mapGlobalCenterY = <?php echo(isset($requestedX) && isset($requestedY) ? $requestedY : "playerDemesne[0].y")?>;
 
             var selectedParcel = {x: mapGlobalCenterX, y: mapGlobalCenterY};
 
@@ -154,7 +173,7 @@ class MapPage extends BaseLayout {
 
             /*=============== gui functions ===============*/
             function showCurrentDemesne() {
-                demesne = playerDemesne[currentDemesneIndex];
+                var demesne = playerDemesne[currentDemesneIndex];
                 setMapCenter(demesne.x, demesne.y);
                 selectedParcel = {x: demesne.x, y: demesne.y};
                 redrawMap();
@@ -185,12 +204,15 @@ class MapPage extends BaseLayout {
                 var desc = `<b>[${data.x}:${data.y}]</b><br><br>`;
 
                 //noinspection JSUnresolvedVariable
-                var ownerNick = data.ownerNickname;
+                var ownerNick = data.owner_nickname;
 
-                desc += `<b>owner: </b>${ownerNick}<br>`;
+                desc += `<b>owner: </b>${ownerNick == null ? "nobody" : USER_ID == data.owner_id ? "you" : ownerNick}<br>`;
                 //noinspection JSUnresolvedVariable
-                desc += `<b>oil: </b>${data.oil_amount}<br>`;
-                desc += `<b>land cost: </b> <span style="color: blue">todo<span>`;
+                desc += `<b>oil resources: </b>${data.oil_amount == null ? "undiscovered" : data.oil_amount + " barrels"}<br>`;
+                if (USER_ID != data.owner_id) {
+                    //noinspection JSUnresolvedVariable
+                    desc += `<b>land cost: </b> ${data.land_cost}$`;
+                }
                 descObj.innerHTML = desc;
             }
 
@@ -202,8 +224,8 @@ class MapPage extends BaseLayout {
                 var prevLocalY = globalToLocalY(selectedParcel.y);
                 var prevParcelObj = getParcelObject(prevLocalX, prevLocalY);
                 selectedParcel = {x: gX, y: gY};
-                prevParcelObj.updateSubElements(); // hiding selection
-                parcelObj.updateSubElements(); // updating selection and description
+                if (prevParcelObj != null) prevParcelObj.update(); // hiding selection
+                parcelObj.update(); // updating selection and description
             }
 
             /*=============== util functions ===============*/
@@ -221,11 +243,12 @@ class MapPage extends BaseLayout {
                 return val >= from && val <= to;
             }
 
-            function inMapBounds(x, y, delta = 0) {
-                return inBounds(x, delta, WHOLE_MAP_WIDTH - delta) && inBounds(y, delta, WHOLE_MAP_HEIGHT - delta);
+            function inMapBounds(gX, gY, delta = 0) {
+                return inBounds(gX, delta, WHOLE_MAP_WIDTH - delta) && inBounds(gY, delta, WHOLE_MAP_HEIGHT - delta);
             }
 
             function getParcelObject(localX, localY) {
+                if (!inBounds(localX, 0, MAP_SIZE - 1) || !inBounds(localY, 0, MAP_SIZE - 1)) return null;
                 return parcelObjects[localX][localY];
             }
 
@@ -261,8 +284,8 @@ class MapPage extends BaseLayout {
                         } else {
                             parcelObj.lastDssid = -1; // to invalidate any download sessions on this image
                             parcelObj.data = null;
-                            parcelObj.imageObject.src = MAP_FIELD_IMAGE_FOLDER + "terra_incognita.png";
-                            parcelObj.updateSubElements();
+                            parcelObj.imageObject.src = MAP_IMAGE_FOLDER + "field/terra_incognita.png";
+                            parcelObj.update();
                         }
                     }
                 }

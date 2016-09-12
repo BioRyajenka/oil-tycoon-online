@@ -8,6 +8,8 @@
 
 require_once "mysql.php";
 
+// TODO: check result for null everywhere
+
 function getMapSize() {
     // remembering previous answer, because of convenience reasons
     static $res = null;
@@ -25,6 +27,13 @@ function getPlayerInfo($userId) {
     return mySQLQuery("SELECT * FROM user_credentials WHERE user_id='$userId'", function ($result) {
         /** @noinspection PhpUndefinedMethodInspection */
         return $result->fetch_assoc();
+    });
+}
+
+function getPlayerColor($userId) {
+    return mySQLQuery("SELECT * FROM user_gamedata WHERE user_id='$userId'", function ($result) {
+        /** @noinspection PhpUndefinedMethodInspection */
+        return $result->fetch_assoc()['color'];
     });
 }
 
@@ -61,4 +70,8 @@ function getUserIdByLogin($login) {
         /** @noinspection PhpUndefinedMethodInspection */
         return $result->fetch_assoc()['user_id'];
     });
+}
+
+function getFacilities($x, $y) {
+
 }

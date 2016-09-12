@@ -35,6 +35,10 @@ class LoginPage extends BaseLayout {
                         <tr>
                             <td colspan='2'><span style='color: red;'>
                             <?php
+                            if (isset($_GET['session_expired'])) {
+                                //echo "Session expired";
+                                echo "You must log in first.";
+                            }
                             if ($authStatus == AuthStatus::OPERATION_FAILURE || $authStatus == AuthStatus::INCORRECT_SPELLING) {
                                 echo "Wrong authentication pair.";
                             }

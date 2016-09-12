@@ -119,7 +119,7 @@ function publishField($fieldImageTypes, $oilAmountDistribution, $oilSellCostDist
             $fid1 = publishFacility(false);
             $fid2 = publishFacility(false);
             $fid3 = publishFacility(false);
-            $fid4 = publishFacility(false);
+            $fid4 = publishFacility(true);
             mySQLQuery("INSERT INTO field 
     (x, y, oil_sell_cost, oil_amount, image_name, facility1_id, facility2_id, facility3_id, facility4_id) VALUES
     ('$i', '$j', '{$oilSellCostDistribution[$i][$j]}', '{$oilAmountDistribution[$i][$j]}', '{$fieldImageTypes[$i][$j]}', 
