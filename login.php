@@ -23,7 +23,7 @@ class LoginPage extends BaseLayout {
         }
         // if not isset, then it's first run
         if (isset($login) && isset($password) && $authStatus == AuthStatus::OPERATION_SUCCESS) {
-            redirect('/map.php');
+            redirect('/game.php');
             die;
         }
         ?>

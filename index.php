@@ -28,7 +28,7 @@ class WelcomePage extends BaseLayout {
     }
 
     protected function printFootage() {
-        self::printDefaultFootage("<a href='rules.php'>Rules</a>", null, "<a href='about.php'>About</a>");
+        self::printDefaultFootage("<a href='rules.php'>Rules</a>", null, null, "<a href='about.php'>About</a>");
     }
 }
 
