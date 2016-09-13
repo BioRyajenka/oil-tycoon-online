@@ -12,6 +12,9 @@ function showMap() {
 	var arrowSize = document.getElementById("arrow_left").offsetWidth;
 	document.getElementById("arrow_up").style.height = arrowSize + "px";
 	document.getElementById("arrow_down").style.height = arrowSize + "px";
+
+	blockAllButtons();
+	unblockAllButtons();
 }
 
 function onMapDemesneChanged(demesne) {
@@ -112,8 +115,8 @@ function moveMap(dx, dy) {
 
 function setMapCenter(gX, gY) {
 	var delta = (MAP_SIZE - 1) / 2 - 1;
-	gX = Math.max(delta, Math.min(gX, WHOLE_MAP_WIDTH - delta - 1));
-	gY = Math.max(delta, Math.min(gY, WHOLE_MAP_HEIGHT - delta - 1));
+	gX = Math.max(delta, Math.min(gX, WHOLE_MAP_WIDTH - delta));
+	gY = Math.max(delta, Math.min(gY, WHOLE_MAP_HEIGHT - delta));
 	mapGlobalCenter = {x: gX, y: gY};
 }
 

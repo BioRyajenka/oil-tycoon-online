@@ -21,7 +21,6 @@ class MapPage extends BaseLayout {
 		$arrowSize = "8%";
 		?>
 
-		<!--suppress JSUnresolvedVariable -->
 		<tr id="top_section"></tr>
 		<tr id="bottom_section">
 			<td colspan="4">
@@ -71,6 +70,7 @@ class MapPage extends BaseLayout {
 			//noinspection JSAnnotator
 			const playerDemesne = <?php echo json_encode(getCurrentPlayerDemesne())?>;
 		</script>
+		<script src="/scripts/js/aux_gui.js" type="text/javascript"></script>
 		<script src="/scripts/js/game_common.js" type="text/javascript"></script>
 		<script src="/scripts/js/map.js" type="text/javascript"></script>
 		<script src="/scripts/js/parcel.js" type="text/javascript"></script>

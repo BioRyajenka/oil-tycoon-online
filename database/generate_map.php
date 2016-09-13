@@ -12,7 +12,7 @@ require "../scripts/perlin.php";
 const WIDTH = 15;
 const HEIGHT = 15;
 
-const OIL_PER_CELL = 500;
+const OIL_PER_CELL = 50000;
 const AVERAGE_OIL_COST = 1;
 //const AVERAGE_PARCEL_COST = 10;
 

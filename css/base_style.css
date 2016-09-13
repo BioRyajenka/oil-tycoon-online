@@ -39,19 +39,19 @@ tfoot, thead {
 .wide_picture {
   max-width: 100%; }
 
+.facility_td {
+  border: 3px solid black; }
+
+.facility_td:not(.disabled):hover {
+  border: 3px solid white; }
+
 .clickable, .button {
   background: #262b38;
   color: #ffffff; }
 
-.clickable:hover, .button:hover {
+.clickable:not(.disabled):hover, .button:not(.disabled):hover {
   background: #ffffff;
   color: #000000; }
-
-.facility_td {
-  border: 3px solid black; }
-
-.facility_td:hover {
-  border: 3px solid white; }
 
 .button {
   border: 3px solid #000000;
@@ -61,10 +61,10 @@ tfoot, thead {
   text-decoration: none;
   vertical-align: middle; }
 
-.button:hover {
+.button:not(.disabled):hover {
   border: 3px solid #000000; }
 
-.button:active {
+.button:not(.disabled):active {
   border: 3px solid #000000;
   background: #262b38;
   color: #fff; }

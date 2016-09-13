@@ -64,9 +64,10 @@ function updateDescription(parcelObj) {
 	desc += `<b>owner: </b>${ownerNick == null ? "nobody" : USER_ID == data.owner_id ? "you" : ownerNick}<br>`;
 	//noinspection JSUnresolvedVariable
 	desc += `<b>oil resources: </b>${data.oil_amount == null ? "undiscovered" : data.oil_amount + " barrels"}<br>`;
+	desc += `<b>oil sell cost: </b> ${data.oil_sell_cost}$<br>`;
 	if (USER_ID != data.owner_id) {
 		//noinspection JSUnresolvedVariable
-		desc += `<b>land cost: </b> ${data.land_cost}$`;
+		desc += `<b>land cost: </b> ${data.land_cost}$<br>`;
 	}
 	descObj.innerHTML = desc;
 }
@@ -119,40 +120,46 @@ ParcelViewForMapPage.prototype.update = function () {
 	}
 }
 
+function performDatabaseRequest(methodName, arguments, consumer) {
+	/**
+	 * Creates XMLHttpRequest object in capability with all browsers
+	 */
+	function getXmlHttpRequestObject() {
+		var xmlhttp;
+		try {
+			xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch (e) {
+			try {
+				xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+			} catch (E) {
+				xmlhttp = false;
+			}
+		}
+		if (!xmlhttp && typeof XMLHttpRequest != 'undefined') {
+			xmlhttp = new XMLHttpRequest();
+		}
+		return xmlhttp;
+	}
 
-/**
- * Creates XMLHttpRequest object in capability with all browsers
- */
-function getXmlHttp() {
-    var xmlhttp;
-    try {
-        xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e) {
-        try {
-            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-        } catch (E) {
-            xmlhttp = false;
-        }
-    }
-    if (!xmlhttp && typeof XMLHttpRequest != 'undefined') {
-        xmlhttp = new XMLHttpRequest();
-    }
-    return xmlhttp;
-}
-
-function performXmlHttpRequest(url, consumer) {
-    var xmlHttp = getXmlHttp();
-    xmlHttp.open("GET", url, true);
-    xmlHttp.onreadystatechange = function () {
-        if (xmlHttp.readyState == 4) {
-            if (xmlHttp.status == 200) {
-                consumer(JSON.parse(xmlHttp.responseText));
-            } else {
-                console.error("error doing xml http request");
-            }
-        }
-    };
-    xmlHttp.send(null);
+	function performXmlHttpRequest(url, consumer) {
+		//console.log("pergo");
+		var xmlHttp = getXmlHttpRequestObject();
+		xmlHttp.open("GET", url, true);
+		xmlHttp.onreadystatechange = function () {
+			if (xmlHttp.readyState == 4) {
+				if (xmlHttp.status == 200) {
+					//console.log("response: " + xmlHttp.responseText);
+					consumer(JSON.parse(xmlHttp.responseText));
+					//console.log("after");
+				} else {
+					console.error("error doing xml http request");
+				}
+			}
+		};
+		xmlHttp.send(null);
+	}
+	var url = `/scripts/database_adapter.php?method=${methodName}&${arguments}`;
+	performXmlHttpRequest(url, consumer);
 }
 
 function ParcelView(id) {
@@ -162,7 +169,7 @@ function ParcelView(id) {
 ParcelView.prototype.getHTML = function () {
     var res = `<img style="position: absolute" src="${MAP_IMAGE_FOLDER}habitability.png" id="${this.id}_habitability">`;
     //res += `<img style="position: absolute" src="/res/map/frame.png" id="${this.id}_frame">`;
-    res += `<img style="width: 100%; src="/res/loading.gif" id="${this.id}_image" border=0>`;
+    res += `<img style="width: 100%" src="/res/loading.gif" id="${this.id}_image" border=0>`;
     return res;
 };
 
@@ -209,8 +216,7 @@ ParcelView.prototype.downloadData = function (globalX, globalY, onFinish = null)
     this.lastDssid = dssid;
 
     var that = this;
-    // TODO: maybe cache it?
-    performXmlHttpRequest(`/scripts/get_parcel_info.php?x=${globalX}&y=${globalY}`, function (data) {
+    performDatabaseRequest("get_parcel_info", `x=${globalX}&y=${globalY}`, function (data) {
         if (that.lastDssid != dssid) return;
         that.data = data;
         that.update();
