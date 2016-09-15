@@ -8,6 +8,7 @@
 
 require "../scripts/mysql.php";
 require "../scripts/perlin.php";
+require "../scripts/mysql_queries.php";
 
 const WIDTH = 15;
 const HEIGHT = 15;
@@ -107,10 +108,11 @@ function publishField($fieldImageTypes, $oilAmountDistribution, $oilSellCostDist
     mySQLQuery("SET FOREIGN_KEY_CHECKS=0", null);
     mySQLQuery("TRUNCATE facilities", null);
     mySQLQuery("TRUNCATE field", null);
-    mySQLQuery("TRUNCATE user_credentials", null);
+    //mySQLQuery("TRUNCATE user_credentials", null);
     mySQLQuery("TRUNCATE user_gamedata", null);
     mySQLQuery("TRUNCATE user_knowledge_facilities", null);
-    mySQLQuery("TRUNCATE user_knowledge_oil", null);
+	mySQLQuery("TRUNCATE user_knowledge_oil", null);
+	mySQLQuery("TRUNCATE timestamps", null);
 
     echo "tables truncated successfully<br>";
 
@@ -126,6 +128,11 @@ function publishField($fieldImageTypes, $oilAmountDistribution, $oilSellCostDist
     '$fid1', '$fid2', '$fid3', '$fid4')", null);
         }
     }
+
+    acquireParcel(1, 3, 3);
+	mySQLQuery("INSERT INTO user_gamedata 
+(user_id, money, maxlevel_silo, maxlevel_transport_depot, maxlevel_scouting_depot, maxlevel_rig, transport_speed, researched_unique_technologies, color) VALUES 
+('1', 1000000000, 1, 1, 1, 1, 1, '', '#ff0000')", null);
     echo "field published successfully<br>";
 }
 

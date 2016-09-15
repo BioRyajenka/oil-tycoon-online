@@ -3,6 +3,8 @@
 /*=============== switching functions ===============*/
 
 function showMap() {
+	updateMoneyInfo();
+
 	document.getElementById("top_section").innerHTML = MAP_UPPER_SECTION_HTML;
 
 	initMap();

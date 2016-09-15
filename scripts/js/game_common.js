@@ -26,6 +26,12 @@ function switchToParcel() {
 
 //==================
 
+function updateMoneyInfo() {
+	performDatabaseRequest("money", "", function (result) {
+		document.getElementById("money").innerHTML = `Money: ${result}$`;
+	}, true);
+}
+
 var currentDemesneIndex = 0;
 
 function showCurrentDemesne() {
@@ -120,7 +126,7 @@ ParcelViewForMapPage.prototype.update = function () {
 	}
 }
 
-function performDatabaseRequest(methodName, arguments, consumer) {
+function performDatabaseRequest(methodName, arguments, consumer, needLoadingDialog) {
 	/**
 	 * Creates XMLHttpRequest object in capability with all browsers
 	 */
@@ -141,16 +147,20 @@ function performDatabaseRequest(methodName, arguments, consumer) {
 		return xmlhttp;
 	}
 
-	function performXmlHttpRequest(url, consumer) {
-		//console.log("pergo");
+	function performXmlHttpRequest(url, consumer, needLoadingDialog) {
+		if (needLoadingDialog) {
+			var hideLoadingDialog = showLoadingDialog();
+		}
+
 		var xmlHttp = getXmlHttpRequestObject();
 		xmlHttp.open("GET", url, true);
 		xmlHttp.onreadystatechange = function () {
 			if (xmlHttp.readyState == 4) {
 				if (xmlHttp.status == 200) {
-					//console.log("response: " + xmlHttp.responseText);
+					if (needLoadingDialog) {
+						hideLoadingDialog();
+					}
 					consumer(JSON.parse(xmlHttp.responseText));
-					//console.log("after");
 				} else {
 					console.error("error doing xml http request");
 				}
@@ -159,7 +169,7 @@ function performDatabaseRequest(methodName, arguments, consumer) {
 		xmlHttp.send(null);
 	}
 	var url = `/scripts/database_adapter.php?method=${methodName}&${arguments}`;
-	performXmlHttpRequest(url, consumer);
+	performXmlHttpRequest(url, consumer, needLoadingDialog);
 }
 
 function ParcelView(id) {
@@ -206,8 +216,10 @@ ParcelView.prototype.getWidth = function () {
     return this.imageObject.clientWidth;
 };
 
-ParcelView.prototype.downloadData = function (globalX, globalY, onFinish = null) {
-    // dssid <=. download session id
+ParcelView.prototype.downloadData = function (globalX, globalY, onFinish = null, needLoadingDialog = false) {
+	//if (typeof onFinish != 'function') console.log(onFinish);
+
+	// dssid <=> download session id
     if (typeof ParcelView.freeDssid == 'undefined') {
         ParcelView.freeDssid = 0;
     }
@@ -221,7 +233,7 @@ ParcelView.prototype.downloadData = function (globalX, globalY, onFinish = null)
         that.data = data;
         that.update();
         if (onFinish != null) onFinish(that);
-    });
+    }, needLoadingDialog);
 
     /*
      function sleep(time) {

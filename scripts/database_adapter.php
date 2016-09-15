@@ -11,13 +11,15 @@ namespace database_adapter;
 require "mysql.php";
 require "mysql_queries.php";
 require "session_guard.php";
+require_once "log.php";
 
 $aliases = [
 	'test' => 'test',
 	'get_parcel_info' => 'getParcelInfo',
 	'try_build' => 'tryBuild',
 	'try_upgrade' => 'tryUpgrade',
-	'money' => 'getMoney'
+	'money' => 'getMoney',
+	'destroy' => 'destroyFacility'
 ];
 
 function processRequest() {
@@ -43,41 +45,43 @@ function test() {
 }
 
 function tryBuild() {
-	//TODO: ensure owner
+	//TODO: ensure owner and timings and previous type (should be none)
 	$facilityId = $_GET["facility_id"];
 	$newType = $_GET["type"];
 	$money = getCurrentPlayerMoney();
-	$facilityParameters = getFacilityParameters($facilityId, 1);
+	$facilityParameters = getFacilityParameters($newType, 1);
 	$cost = $facilityParameters['cost'];
 	if ($cost > $money) {
-		return null;
+		return;
 	}
 	setCurrentPlayerMoney($money - $cost);
-	updateFacility($facilityId, $newType, 1);
-
-	require_once "logger.php";
-	debug_log("$facilityId	$newType");
-	return "success";
+	updateFacilityViaTimestamp($facilityId, $newType, 1);
 }
 
 function tryUpgrade() {
-	//TODO: ensure owner
+	//TODO: ensure owner and timings
 	$facilityId = $_GET["facility_id"];
 	$facilityInfo = getFacilityInfo($facilityId);
 	$level = $facilityInfo['level'];
 	$type = $facilityInfo['type'];
 	if ($type == 'locked' || $type == 'none' || $level == 30) {
-		return null;
+		return;
 	}
 	$money = getCurrentPlayerMoney();
-	$facilityParameters = getFacilityParameters($facilityId, $level + 1);
+	$facilityParameters = getFacilityParameters($type, $level + 1);
 	$cost = $facilityParameters['cost'];
 	if ($cost > $money) {
-		return null;
+		return;
 	}
+
 	setCurrentPlayerMoney($money - $cost);
-	updateFacility($facilityId, $type, $level + 1);
-	return "success";
+	updateFacilityViaTimestamp($facilityId, $type, $level + 1);
+}
+
+function destroyFacility() {
+	//TODO: ensure owner and timings
+	$facilityId = $_GET["facility_id"];
+	\destroyFacility($facilityId);
 }
 
 function getMoney() {
@@ -88,6 +92,7 @@ function getParcelInfo() {
 	$x = $_GET["x"];
 	$y = $_GET["y"];
 	$userId = $_SESSION["user_id"];
+	\ensureParcelTimestamps($x, $y);
 	$result = \getParcelInfo($x, $y);
 	if ($result == null) return null;
 	if ($result['owner_id'] != $userId) {
@@ -98,6 +103,11 @@ function getParcelInfo() {
 		}
 		$result['oil_amount'] = $uk['amount'];
 		$result['oil_discovered'] = $uk['discovered'];
+	} else {
+		for ($i = 1; $i <= 4; $i++) {
+			$result["facility$i" . "construction_progress"] =
+				getFacilityConstructionProgress($result["facility$i" . "id"]);
+		}
 	}
 
 	$playerInfo = getPlayerInfo($result['owner_id']);

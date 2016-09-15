@@ -9,11 +9,14 @@
 require "scripts/base_layout.php";
 require "scripts/mysql_queries.php";
 require "scripts/session_guard.php";
+require_once "scripts/log.php";
 
 
 class MapPage extends BaseLayout {
 	protected function printHead() {
-		self::printDefaultHead("Some head");
+		echo "<th id='money'>Money here</th>";
+
+		\clearLog();
 	}
 
 	protected function printBody() {

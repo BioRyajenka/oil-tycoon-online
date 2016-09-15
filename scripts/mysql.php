@@ -29,6 +29,13 @@ namespace {
 		$mysqli = mysql\createMySQLConnection(\mysql\SECONDARY_DATABASE_NAME);
 	}
 
+	function mySQLQueryRow($query) {
+		return mySQLQuery($query, function ($result) {
+			/** @noinspection PhpUndefinedMethodInspection */
+			return $result->fetch_assoc();
+		});
+	}
+
 	/**
 	 * @param $query string query
 	 * @param $consumer callable function which takes query result as it's single argument
@@ -44,7 +51,7 @@ namespace {
 		$result = $mysqli->query($query) or die("error '{$mysqli->error}' in query '$query'");
 
 		if (!is_null($consumer)) {
-			return $consumer($result);
+			return $consumer($result, $query);
 		}
 		if (!is_bool($result)) {
 			// $result may be true for queries like SELECT etc.

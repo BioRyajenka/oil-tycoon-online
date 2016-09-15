@@ -55,6 +55,13 @@ tfoot, thead {
 	max-width: 100%;
 }
 
+.facility_progress_bar {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 50, .6);
+}
+
 .facility_td {
 	border: 3px solid black;
 }

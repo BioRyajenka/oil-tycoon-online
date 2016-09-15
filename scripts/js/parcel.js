@@ -27,6 +27,8 @@ ParcelViewForParcelPage.prototype.init = function () {
 	ParcelView.prototype.init.call(this);
 	for (var i = 0; i < 4; i++) {
 		this[`facility${i}img`] = document.getElementById(`facility${i + 1}`);
+		this[`facility${i}progressbar`] = document.getElementById(`facility${i + 1}progress_bar`);
+		this[`facility${i}levelspan`] = document.getElementById(`facility${i + 1}levelspan`);
 	}
 };
 
@@ -34,7 +36,22 @@ ParcelViewForParcelPage.prototype.update = function () {
 	ParcelView.prototype.update.call(this);
 	if (this.data == null) return;
 	for (var i = 0; i < 4; i++) {
-		this[`facility${i}img`].src = "/res/facilities/" + this.data[`facility${i + 1}type`] + ".png";
+		var type = this.data[`facility${i + 1}type`];
+		var level = this.data[`facility${i + 1}level`];
+		this[`facility${i}img`].src = `/res/facilities/${type}.png`;
+		if (type != 'none' && type != 'locked') {
+			this[`facility${i}levelspan`].innerHTML = `lvl${level}`;
+		} else {
+			this[`facility${i}levelspan`].innerHTML = "";
+		}
+
+		var cp = this.data[`facility${i + 1}construction_progress`];
+		if (cp == 'finished') {
+			this[`facility${i}progressbar`].style.width = "0";
+		} else {
+			this[`facility${i}progressbar`].style.width = (cp * 100) + "%";
+		}
+		console.log("constr: " + cp);
 	}
 	addParcelActions();
 	updateDescription(this);
@@ -60,31 +77,30 @@ function facilityClick(num) {
 	var f = parcelObject[`facility${num}img`];
 	parcelObject.imageObject.src = f.src;
 	parcelObject.habitabilityObject.style.visibility = "hidden";
+	var facilityId = parcelObject.data[`facility${num + 1}id`];
 	var facilityType = parcelObject.data['facility' + (num + 1) + "type"];
 	var facilityLevel = parcelObject.data['facility' + (num + 1) + "level"];
+
+	var reloadOnSuccessFunction = function () {
+		//console.log("reloadOnSuccessFunctionResult: " + result);
+		updateMoneyInfo();
+		parcelObject.downloadData(selectedParcel.x, selectedParcel.y, null, true);
+		clearActions();
+	};
 
 	actionButtonsHolder.innerHTML = generateFacilityHeaderHTML();
 
 	switch (parcelObject.data[`facility${num + 1}type`]) {
 		case 'none':
 			var types = ['rig', 'science lab', 'scout depot', 'silo', 'transport depot'];
-			// WARNING! Can't use double quotes here
 			types.forEach(function (item) {
 				addAction({
 					name: `Build ${item}`,
-					action: function() {
-						var hideLoadingDialog = showLoadingDialog();
-						var facility_id = parcelObject.data[`facility${num + 1}id`];
-						performDatabaseRequest("try_build", `facility_id=${facility_id}&type=${item}`, function(result) {
-							console.log("result: " + result);
-							hideLoadingDialog();
-							if (result == 'success') {
-								parcelObject.downloadData(selectedParcel.x, selectedParcel.y);
-								clearActions();
-							}
-						});
+					action: function () {
+						performDatabaseRequest("try_build", `facility_id=${facilityId}&type=${item}`, reloadOnSuccessFunction, true);
 					}
-				});
+				})
+				;
 			});
 			break;
 		case 'rig':
@@ -93,10 +109,16 @@ function facilityClick(num) {
 		case 'silo':
 		case 'transport depot':
 			addAction({
-				name: "Upgrade"
+				name: "Upgrade",
+				action: function() {
+					performDatabaseRequest("try_upgrade", `facility_id=${facilityId}`, reloadOnSuccessFunction, true);
+				}
 			});
 			addAction({
-				name: "Destroy"
+				name: "Destroy",
+				action: function () {
+					performDatabaseRequest("destroy", `facility_id=${facilityId}`, reloadOnSuccessFunction, true);
+				}
 			});
 			break;
 		case 'locked':
@@ -127,7 +149,7 @@ var actionButtonsHolder;
 
 function init() {
 	parcelObject.init();
-	parcelObject.downloadData(selectedParcel.x, selectedParcel.y);
+	parcelObject.downloadData(selectedParcel.x, selectedParcel.y, null, true); // true means show load dialog
 
 	actionButtonsHolder = document.getElementById("action_buttons");
 	actionButtonsHolder.onclick = function (event) {
@@ -170,12 +192,32 @@ const PARCEL_UPPER_SECTION_HTML = `
 				<table
 					style="margin-left:auto; margin-right:auto; border-collapse: separate; border-spacing: 0">
 					<tr>
-						<td class="facility_td" onclick="facilityClick(0)"><img src="res/loading.gif" id="facility1"></td>
-						<td class="facility_td" onclick="facilityClick(1)"><img src="res/loading.gif" id="facility2"></td>
+						<td style="position: relative" class="facility_td" onclick="facilityClick(0)">
+							<span style="position: absolute; left: 98%; top: 100%; transform: translate(-100%, -100%); 
+								white-space: nowrap;color: midnightblue" id="facility1levelspan"></span>
+							<div class="facility_progress_bar" id="facility1progress_bar"></div>
+							<img src="res/loading.gif" id="facility1">
+						</td>
+						<td style="position: relative" class="facility_td" onclick="facilityClick(1)">
+							<span style="position: absolute; left: 98%; top: 100%; transform: translate(-100%, -100%); 
+								white-space: nowrap;color: midnightblue" id="facility2levelspan"></span>
+							<div class="facility_progress_bar" id="facility2progress_bar"></div>	
+							<img src="res/loading.gif" id="facility2">
+						</td>
 					</tr>
 					<tr>
-						<td class="facility_td" onclick="facilityClick(2)"><img src="res/loading.gif" id="facility3"></td>
-						<td class="facility_td" onclick="facilityClick(3)"><img src="res/loading.gif" id="facility4"></td>
+						<td style="position: relative" class="facility_td" onclick="facilityClick(2)">
+							<span style="position: absolute; left: 98%; top: 100%; transform: translate(-100%, -100%); 
+								white-space: nowrap;color: midnightblue" id="facility3levelspan"></span>
+								<div class="facility_progress_bar" id="facility3progress_bar"></div>
+							<img src="res/loading.gif" id="facility3">
+						</td>
+						<td style="position: relative" class="facility_td" onclick="facilityClick(3)">
+							<span style="position: absolute; left: 98%; top: 100%; transform: translate(-100%, -100%); 
+								white-space: nowrap;color: midnightblue" id="facility4levelspan"></span>
+							<div class="facility_progress_bar" id="facility4progress_bar"></div>
+							<img src="res/loading.gif" id="facility4">
+						</td>
 						<!--                                    <td style="position: relative"><div style="position: absolute; width: 100%; height: 100%" class="clickable2"></div><img src="res/loading.gif" id="facility4"></td>-->
 					</tr>
 				</table>

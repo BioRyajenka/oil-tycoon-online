@@ -7,6 +7,7 @@
  */
 
 require_once "mysql.php";
+require_once "log.php";
 
 // TODO: check result for null everywhere
 
@@ -15,35 +16,23 @@ function getMapSize() {
 	static $res = null;
 
 	if (is_null($res)) {
-		$res = mySQLQuery("SELECT MAX(x) AS width, MAX(y) AS height FROM field", function ($result) {
-			/** @noinspection PhpUndefinedMethodInspection */
-			return $result->fetch_assoc();
-		});
+		$res = mySQLQueryRow("SELECT MAX(x) AS width, MAX(y) AS height FROM field");
 	}
 	return $res;
 }
 
 function getPlayerInfo($userId) {
-	return mySQLQuery("SELECT * FROM user_credentials WHERE user_id='$userId'", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc();
-	});
+	return mySQLQueryRow("SELECT * FROM user_credentials WHERE user_id='$userId'");
 }
 
 function getPlayerColor($userId) {
-	return mySQLQuery("SELECT * FROM user_gamedata WHERE user_id='$userId'", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc()['color'];
-	});
+	return mySQLQueryRow("SELECT * FROM user_gamedata WHERE user_id='$userId'")['color'];
 }
 
 function getUserKnowledgeOil($cellId) {
 	$userId = $_SESSION['user_id'];
 	// todo: update scout task
-	return mySQLQuery("SELECT * FROM user_knowledge_oil WHERE user_id='$userId' AND cell_id='$cellId'", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc();
-	});
+	return mySQLQueryRow("SELECT * FROM user_knowledge_oil WHERE user_id='$userId' AND cell_id='$cellId'");
 }
 
 function getCurrentPlayerDemesne() {
@@ -68,15 +57,12 @@ function acquireParcel($userId, $x, $y) {
 }
 
 function getUserIdByLogin($login) {
-	return mySQLQuery("SELECT user_id FROM user_credentials WHERE login='$login'", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc()['user_id'];
-	});
+	return mySQLQueryRow("SELECT user_id FROM user_credentials WHERE login='$login'")['user_id'];
 }
 
 function getParcelInfo($x, $y) {
 	// TODO: update oil extraction task && construction task
-	return mySQLQuery("
+	return mySQLQueryRow("
 SELECT fi.cell_id, fi.x, fi.y, fi.owner_id, fi.land_cost, fi.oil_sell_cost, fi.oil_amount, fi.image_name,
 	f1.id as 'facility1id', f2.id as 'facility2id', f3.id as 'facility3id', f4.id as 'facility4id',
 	f1.type as 'facility1type', f2.type as 'facility2type', f3.type as 'facility3type', f4.type as 'facility4type',
@@ -92,25 +78,16 @@ facilities f3
 JOIN
 facilities f4
 on f1.id=fi.facility1_id AND f2.id=fi.facility2_id AND f3.id=fi.facility3_id AND f4.id=fi.facility4_id AND fi.x=$x AND fi.y=$y
-", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc();
-	});
+");
 }
 
 function getFacilityInfo($facilityId) {
-	return mySQLQuery("SELECT type, level, data FROM facilities WHERE id='$facilityId'", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc();
-	});
+	return mySQLQueryRow("SELECT type, level, data FROM facilities WHERE id='$facilityId'");
 }
 
 function getCurrentPlayerMoney() {
 	$userId = $_SESSION['user_id'];
-	return mySQLQuery("SELECT money FROM user_gamedata WHERE user_id='$userId'", function ($result) {
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc()['money'];
-	});
+	return mySQLQueryRow("SELECT money FROM user_gamedata WHERE user_id='$userId'")['money'];
 }
 
 function setCurrentPlayerMoney($newMoney) {
@@ -118,25 +95,116 @@ function setCurrentPlayerMoney($newMoney) {
 	mySQLQuery("UPDATE user_gamedata SET money='$newMoney' WHERE user_id='$userId'", null);
 }
 
-function updateFacility($facilityId, $newType, $newLevel) {
+function updateFacilityImmediately($facilityId, $newType, $newLevel) {
 	mySQLQuery("UPDATE facilities SET type='$newType', level='$newLevel' WHERE id='$facilityId'", null);
+}
+
+function destroyFacility($facilityId) {
+	debug("destroying facility $facilityId");
+	mySQLQuery("UPDATE facilities SET type='none' WHERE id='$facilityId'", null);
 }
 
 function getFacilityParameters($type, $level) {
 	useSecondaryDatabase();
-	return mySQLQuery("SELECT cost, data FROM facility_parameters WHERE type='$type' AND level='$level'", function($result) {
-		usePrimaryDatabase();
-		/** @noinspection PhpUndefinedMethodInspection */
-		return $result->fetch_assoc();
-	});
+	$res = mySQLQueryRow("SELECT cost, data FROM facility_parameters WHERE type='$type' AND level='$level'");
+	usePrimaryDatabase();
+	return $res;
 }
 
-/* ================ timed tasks ================ */
-
-function startConstructionTask() {
-
+function getData($table, $id) {
+	return json_decode(mySQLQueryRow("SELECT data FROM $table WHERE id='$id'")['data']);
 }
 
-function startScoutTask() {
+function updateData($table, $id, $key, $value) {
+	$data = getData($table, $id);
+	if ($data == null) {
+		$data = [];
+	}
+	$data[$key] = $value;
+	$data = json_encode($data);
+	mySQLQuery("INSERT INTO $table (data) VALUES ('$data') WHERE id='$id'", null);
+}
 
+/* ================ timings ================ */
+
+function getMySQLTime() {
+	return mySQLQueryRow("SELECT NOW()")['NOW()'];
+}
+
+function processTimestamp($stamp) {
+	debug("stamp: " . var_export($stamp, true));
+	$stampId = $stamp['id'];
+	$progress = getTimestampProgress($stamp);
+	$data = json_decode($stamp['data'], true);
+	switch ($stamp['type']) {
+		case 'facility_update':
+			debug("pcti: $progress");
+			if ($progress !== 'finished') return;
+			debug("wtf: " . json_encode($progress != 'finished'));
+			$fid = $stamp['facility_trigger'];
+			$type = $data['type'];
+			$level = $data['level'];
+			updateFacilityImmediately($fid, $type, $level);
+			mySQLQuery("DELETE FROM timestamps WHERE id='$stampId'", null);
+			break;
+		case 'scout':
+			if ($progress != 'finished') return;
+			break;
+		case 'oil_extraction':
+			break;
+	}
+}
+
+function ensureParcelTimestamps($x, $y) {
+	$facilities = mySQLQueryRow("SELECT facility1_id, facility2_id, facility3_id, facility4_id FROM field WHERE x='$x' AND y='$y'");
+	foreach ($facilities as $k => $v) {
+		mySQLQuery("SELECT * FROM timestamps WHERE facility_trigger='$v'", function ($result) {
+			/** @noinspection PhpUndefinedMethodInspection */
+			while ($stamp = $result->fetch_assoc()) {
+				processTimestamp($stamp);
+			}
+		});
+	}
+	$parcelId = mySQLQueryRow("SELECT cell_id FROM field WHERE x='$x' AND y='$y'")['cell_id'];
+	$stamp = mySQLQueryRow("SELECT * FROM timestamps WHERE parcel_trigger='$parcelId'");
+	if ($stamp != null) {
+		processTimestamp($stamp);
+	}
+}
+
+function getFacilityConstructionProgress($facilityId) {
+	$stamp = mySQLQueryRow("SELECT * FROM timestamps WHERE facility_trigger='$facilityId'");
+	// if it is in construction, there are only one timestamp associated with it
+	if ($stamp == null || $stamp['type'] != 'facility_update') {
+		return "finished";
+	}
+	return getTimestampProgress($stamp); //number_format($res, 0, '.', '')
+}
+
+function getTimestampProgress($stamp) {
+	$currentTime = strtotime(getMySQLTime());
+	$startTime = strtotime($stamp['start_time']);
+	$duration = $stamp['duration'];
+	debug("progress: $currentTime $startTime $duration");
+	$res = min(($currentTime - $startTime) / $duration, 1);
+	if ($res == 1) {
+		return "finished";
+	}
+	debug("progress res: $res");
+	return $res;
+}
+
+function getConstructionTime($level) {
+	useSecondaryDatabase();
+	$res = mySQLQueryRow("SELECT construction_time FROM facility_timings WHERE level='$level'")['construction_time'];
+	usePrimaryDatabase();
+	return $res;
+}
+
+function updateFacilityViaTimestamp($facilityId, $newType, $newLevel) {
+	// TODO: ensure there are no other timestamps
+	$data = json_encode(['type' => $newType, 'level' => $newLevel]);
+	$duration = getConstructionTime($newLevel);
+	mySQLQuery("INSERT INTO timestamps (type, data, facility_trigger, duration) 
+					   VALUES ('facility_update', '$data', '$facilityId', '$duration')", null);
 }

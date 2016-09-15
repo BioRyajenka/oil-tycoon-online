@@ -6,9 +6,8 @@
  * Time: 1:29
  */
 
-const MAX_LEVEL = 30;
-
 require "../scripts/mysql.php";
+require_once "max_level.php";
 
 useSecondaryDatabase();
 
